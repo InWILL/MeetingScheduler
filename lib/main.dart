@@ -52,7 +52,7 @@ class _MeetingListPageState extends State<MeetingListPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text('Meeting Schedule')),
+      appBar: AppBar(title: Text('Meeting Scheduler')),
       body: FutureBuilder<List<Meeting>>(
         future: _futureMeetings,
         builder: (context, snapshot) {
