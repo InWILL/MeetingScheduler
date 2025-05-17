@@ -29,6 +29,7 @@ class MeetingListPage extends StatefulWidget {
 
 class _MeetingListPageState extends State<MeetingListPage> {
   late Future<List<Meeting>> _futureMeetings;
+  int? _hoveredIndex;
 
   @override
   void initState() {
@@ -85,7 +86,16 @@ class _MeetingListPageState extends State<MeetingListPage> {
                       'Location: ${meeting.location}',
                       style: TextStyle(fontSize: 16),
                     ),
-                    trailing: Icon(Icons.access_time),
+                    trailing: MouseRegion(
+                      onEnter: (_) => setState(() => _hoveredIndex = index),
+                      onExit: (_) => setState(() => _hoveredIndex = null),
+                      child: _hoveredIndex == index
+                          ? IconButton(
+                              icon: Icon(Icons.delete, color: Colors.red),
+                              onPressed: () => _confirmDelete(context, meeting),
+                            )
+                          : Icon(Icons.access_time),
+                    ),
                   ),
                 ),
               );
@@ -109,6 +119,47 @@ class _MeetingListPageState extends State<MeetingListPage> {
         },
       ),
     );
+  }
+
+  void _confirmDelete(BuildContext context, Meeting meeting) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('Delete Meeting'),
+        content: Text('Are you sure you want to delete "${meeting.title}"?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              Navigator.of(context).pop(); // close dialog
+              await _deleteMeeting(meeting.startTime);
+            },
+            child: Text('Delete'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _deleteMeeting(DateTime starttime) async {
+    final url = Uri.parse('https://uxo0tjm9g9.execute-api.eu-north-1.amazonaws.com/DeleteMeeting');
+    final response = await http.delete(
+      url,
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({'StartTime': starttime.toUtc().toIso8601String()}),
+    );
+
+    if (response.statusCode == 200 || response.statusCode == 204) {
+      setState(() {
+        _futureMeetings = fetchMeetings();
+      });
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Meeting deleted')));
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Failed to delete meeting')));
+    }
   }
 
 }
